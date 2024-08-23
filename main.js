@@ -1,8 +1,12 @@
-const canvas = document.getElementById("myCanvas");
-canvas.width = 200;
+const carCanvas = document.getElementById("carCanvas");
+carCanvas.width = 200;
 
-const ctx = canvas.getContext("2d");
-const road = new Road(canvas.width/2, canvas.width * 0.9);
+const networkCanvas = document.getElementById("networkCanvas");
+networkCanvas.width = 300;
+
+const carCtx = carCanvas.getContext("2d");
+const networkCtx = networkCanvas.getContext("2d");
+const road = new Road(carCanvas.width/2, carCanvas.width * 0.9);
 const car = new Car(road.getLaneCenter(1), 100, 30, 50, "KEYS");
 const traffic = [
   new Car(road.getLaneCenter(1), -100, 30, 50, "DUMMY", 2)
@@ -16,17 +20,19 @@ function animate() {
   }
   
   car.update(road.borders, traffic);
-  canvas.height = window.innerHeight; //also clears the canvas lol
-  
-  ctx.save();
-  ctx.translate(0, -car.y+canvas.height*0.7);
+  carCanvas.height = window.innerHeight; //also clears the canvas lol
+  networkCanvas.height = window.innerHeight;
 
-  road.draw(ctx);
+  carCtx.save();
+  carCtx.translate(0, -car.y+carCanvas.height*0.7);
+
+  road.draw(carCtx);
   for (let i = 0; i < traffic.length; i++) {
-    traffic[i].draw(ctx);
+    traffic[i].draw(carCtx);
   }
-  car.draw(ctx);
+  car.draw(carCtx);
 
-  ctx.restore();
+  carCtx.restore();
+  Visualizer.drawNetwork(networkCtx, car.brain);
   requestAnimationFrame(animate);
 }
