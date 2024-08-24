@@ -21,7 +21,7 @@ class Visualizer {
       Visualizer.drawLevel(ctx, network.levels[i], 
         left, levelTop, 
         width, levelHeight,
-        i == network.levels.length - 1 ? ['⬆', '⬅', '⮕', '⬇'] : []
+        i == network.levels.length - 1 ? ['🠉','🠈','🠊','🠋'] : []
       );
     }      
   }
@@ -84,9 +84,9 @@ class Visualizer {
         ctx.fillStyle = "black";
         ctx.strokeStyle = "white";
         ctx.font = (nodeRadius*1.5) + "px Arial";
-        ctx.fillText(outputLabels[i], x, top + nodeRadius*0.1);
+        ctx.fillText(outputLabels[i], x - 11, top + nodeRadius*0.1);
         ctx.lineWidth = 0.5;
-        ctx.strokeText(outputLabels[i], x, top);
+        ctx.strokeText(outputLabels[i], x - 11, top);
       }
     }
   }
