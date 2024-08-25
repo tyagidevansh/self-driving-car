@@ -4,17 +4,56 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Self-driving car</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap5-toggle@5.0.4/css/bootstrap5-toggle.min.css" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <canvas id="carCanvas"></canvas>
-  <div id="verticalButtons">
-    <button onclick="save()">💾</button>
-    <button onclick="discard()">🗑️</button>
+  <div id="container">
+    <div id="leftCol">
+      <h3>Watching a neural network evolve</h3>
+      <h5>This showcase exists to display neural networks training in real time.
+        <br>Each run, 100 cars will be generated and attempt to get as far as possible while avoiding the randomly generated oncoming traffic.
+        <br>The "brain" and all the neuron activations of the best car will be displayed on the right.
+        <br>You can automate the training or generate each generation manually. Even when automated you can use the buttons beside the 
+            track to save a new best car to reproduce or get rid of the current species. </h5>
+
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="automationSwitch">
+              <label class="form-check-label" for="automationSwitch">Automate training</label>
+            </div>
+
+            <div class="mb-3">
+              <label for="mutationRange" class="form-label">Mutation</label>
+              <input type="range" class="form-range" min="0" max="1" step="0.01" id="mutationRange">
+              <span id="mutationValue">0.1</span>
+            </div>
+    </div> 
+    <div id="carColumn">
+      <canvas id="carCanvas"></canvas>
+      
+    </div>
+    <div id="verticalButtons">
+        <button onclick="save()">💾</button>
+        <button onclick="discard()">🗑️</button>
+        <button onclick="reset()">🔄</button>
+      </div>
+    <canvas id="networkCanvas"></canvas>
+    
+    <div id="rightCol">
+      <h3>Stats and Settings</h3>
+      <h4>Generation : <span id="generationText"> 1 </span></h4>
+      <h4>Score : <span id="scoreText"> 0 </span></h4>
+      <h4>Best Score : <span id="maxScoreText"> 0 </span></h4>
+      <h4>Cars Remaining : <span id="carsRemainingText"> 0 </span></h4>
+    </div>
   </div>
-  <canvas id="networkCanvas"></canvas>
-  <script src = "visualizer.js"></script>
-  <script src = "sensor.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap5-toggle@5.0.4/js/bootstrap5-toggle.jquery.min.js"></script>
+  <script src="visualizer.js"></script>
+  <script src="sensor.js"></script>
   <script src="network.js"></script>
   <script src="utils.js"></script>
   <script src="road.js"></script>

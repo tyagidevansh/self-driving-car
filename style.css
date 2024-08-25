@@ -1,15 +1,45 @@
-body{
+body {
   margin: 0;
   background: darkgray;
   overflow: hidden;
+  height: 100vh;
+}
+
+#container {
   display: flex;
-  justify-content: center;
-  align-items: center;
+  height: 100%;
+}
+
+#leftCol {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: medium;
+  font-weight: bold;
+  width: 450px;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+#carColumn {
+  display: flex;
+  flex-direction: column;
 }
 
 #verticalButtons {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center; 
+  margin-top: 10px;
+  width: 32px;
+  margin-left: 20px;
+}
+
+#rightCol {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: medium;
+  font-weight: bold;
+  padding: 20px;
+  overflow-y: auto;
 }
 
 button {
@@ -20,15 +50,19 @@ button {
   cursor: pointer;
 }
 
-button:hover{
+button:hover {
   background: blue;
 }
 
-#networkCanvas{
+#networkCanvas {
   background: black;
-  margin-left: 50px;
+  margin-left: 20px;
 }
 
-#carCanvas{
+#carCanvas {
   background: lightgray;
+}
+
+#carCanvas, #networkCanvas {
+  height: 100%;
 }
