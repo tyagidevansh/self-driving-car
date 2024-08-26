@@ -76,6 +76,12 @@ document.addEventListener('DOMContentLoaded', (event) => {
   angleRange.value = 120;
   sensorValue.textContent = sensorRange.value;
   angleRange.value = angleRange.value;
+  const rayCount = parseInt(sensorRange.value);
+  sensorValue.textContent = rayCount;
+  cars.forEach(car => car.sensor.setRayCount(rayCount));
+  const angle = parseInt(angleRange.value);
+  angleValue.textContent = angle;
+  cars.forEach(car => car.sensor.setRaySpread(angle));
 
   sensorRange.addEventListener('input', () => {
     const rayCount = parseInt(sensorRange.value);
@@ -142,8 +148,16 @@ function discard() {
 
 function reset() {
   score = 0;
-  cars = generateCars(numberOfCars);
+  
+  if (isAutomated) {
+    const sortedCars = cars.sort((a, b) => b.fitness - a.fitness);
+    cars = generateNextGeneration(sortedCars);
+  } else {
+    cars = generateCars(numberOfCars);
+  }
+  
   bestCar = cars[0];
+
   if (isBrainLoaded && loadedBrain) {
     applyLoadedBrain(loadedBrain);
   } else if (localStorage.getItem("bestBrain")) {
@@ -156,13 +170,15 @@ function reset() {
       }
     }
   }
+
   traffic = [
     new Car(road.getLaneCenter(1), -100, 30, 50, "DUMMY", 2),
     new Car(road.getLaneCenter(0), -300, 30, 50, "DUMMY", 2),
     new Car(road.getLaneCenter(2), -300, 30, 50, "DUMMY", 2),
     new Car(road.getLaneCenter(0), -500, 30, 50, "DUMMY", 2),
     new Car(road.getLaneCenter(1), -500, 30, 50, "DUMMY", 2)
-  ]
+  ];
+
   generation += 1;
 
   const generationText = document.getElementById("generationText");
@@ -174,17 +190,13 @@ function reset() {
     trainingStartTime = new Date().getTime();
   }
 
-  // if (isBrainLoaded) {
-  //   bestCar.brain = JSON.parse(JSON.stringify(loadedBrain));
-  // }
-
   const rayCount = parseInt(document.getElementById('sensorRange').value);
   const raySpread = parseInt(document.getElementById('angleRange').value);
 
   cars.forEach(car => {
     car.sensor.setRayCount(rayCount);
     car.sensor.setRaySpread(raySpread);
-  })
+  });
 }
 
 function loadBrain(file) {
@@ -273,6 +285,35 @@ function generateTraffic() {
   }
 }
 
+function calculateFitness(car) {
+  const distanceScore = -car.y * 2; 
+  const speedScore = car.speed * 20; 
+  const trafficClearedScore = car.trafficCleared * 5000; 
+  //const laneCenteringScore = 1 - (Math.abs(car.x - road.getLaneCenter(Math.floor(car.x / (road.width / 3)))) / (road.width / 6));
+  const laneCenteringScore = 0;
+  const collisionPenalty = car.damaged ? 2000 : 0; 
+  
+  return distanceScore + speedScore + trafficClearedScore + laneCenteringScore * 100 - collisionPenalty;
+}
+
+function generateNextGeneration(sortedCars) {
+  const newCars = [];
+  const topPerformers = sortedCars.slice(0, Math.ceil(cars.length * 0.2)); // top 20%
+
+  for (let i = 0; i < numberOfCars; i++) {
+    if (i < topPerformers.length) {
+      newCars.push(new Car(road.getLaneCenter(1), 100, 30, 50, "AI"));
+      newCars[i].brain = JSON.parse(JSON.stringify(topPerformers[i].brain));
+    } else {
+      const parentBrain = topPerformers[Math.floor(Math.random() * topPerformers.length)].brain;
+      newCars.push(new Car(road.getLaneCenter(1), 100, 30, 50, "AI"));
+      newCars[i].brain = JSON.parse(JSON.stringify(parentBrain));
+      NeuralNetwork.mutate(newCars[i].brain, mutation);
+    }
+  }
+  return newCars;
+}
+
 function animate(time) {
   generateTraffic();
   score = Math.max(-bestCar.y, 0);
@@ -283,31 +324,35 @@ function animate(time) {
   maxScoreText.textContent = Math.floor(maxScore / 10);
   localStorage.setItem("maxScore", maxScore.toString());
   
-  const undamagedCars = cars.filter(car => !car.damaged).length;
-  carsRemainingText.textContent = undamagedCars;
+  const aliveCars = cars.filter(car => !car.damaged);
+  carsRemainingText.textContent = aliveCars.length;
 
-    if (isAutomated) {
-        const currentTime = new Date().getTime();
-        const elapsedTime = currentTime - trainingStartTime;
+  if (isAutomated) {
+    const currentTime = new Date().getTime();
+    const elapsedTime = currentTime - trainingStartTime;
 
-        if (elapsedTime >= trainingDuration || undamagedCars === 0) {
-            if (score > maxScore * 0.7) {
-                save();
-                maxScore = score;
-                localStorage.setItem("maxScore", maxScore.toString());
-            }
+    if (elapsedTime >= trainingDuration || aliveCars.length === 0) {
+      const sortedCars = cars.sort((a, b) => b.fitness - a.fitness);
+      const topPerformer = sortedCars[0];
 
-            generation++;
-            reset();
+      if (topPerformer.fitness > bestCar.fitness) {
+        bestCar = topPerformer;
+        save();
+        maxScore = score;
+        localStorage.setItem("maxScore", maxScore.toString());
+      }
+
+      generation++;
+      cars = generateNextGeneration(sortedCars);
+      reset();
+    } else {
+      cars.forEach(car => {
+        if (car.speed < 1 && elapsedTime > 5000 || car.y > bestCar.y + 300) {
+          car.damaged = true;
         }
-
-
-        cars.forEach(car => {
-            if (car.speed < 1 && elapsedTime > 5000) {
-                car.damaged = true;
-            }
-        });
+      });
     }
+  }
   
   for (let i = 0; i < traffic.length; i++) {
     traffic[i].update(road.borders, []);
@@ -317,20 +362,17 @@ function animate(time) {
     cars[i].update(road.borders, traffic);
   }
   
-  
+  cars.forEach(car => {
+    car.fitness = calculateFitness(car);
+  });
 
-  //fitness function
-  bestCar = cars.find(
-    c => c.y == Math.min(
-      ...cars.map(c=>c.y)
-    )
-  );
+  bestCar = cars.reduce((best, car) => (car.fitness > best.fitness ? car : best), cars[0]);
 
-  carCanvas.height = window.innerHeight; //also clears the canvas lol
+  carCanvas.height = window.innerHeight;
   networkCanvas.height = window.innerHeight;
 
   carCtx.save();
-  carCtx.translate(0, -bestCar.y+carCanvas.height*0.7);
+  carCtx.translate(0, -bestCar.y + carCanvas.height * 0.7);
 
   road.draw(carCtx);
   for (let i = 0; i < traffic.length; i++) {
@@ -345,7 +387,7 @@ function animate(time) {
   bestCar.draw(carCtx, true);
   
   carCtx.restore();
-  networkCtx.lineDashOffset = -time/50;
+  networkCtx.lineDashOffset = -time / 50;
   Visualizer.drawNetwork(networkCtx, bestCar.brain);
   requestAnimationFrame(animate);
 }

@@ -12,6 +12,8 @@ class Car{
     this.angle = 0;
     this.damaged = false;
     this.fitness = 0;
+    this.trafficCleared = 0;
+    this.passedVehicles = [];
     this.useBrain = controlType == "AI";
 
     if (controlType != "DUMMY") {
@@ -38,6 +40,7 @@ class Car{
       this.#move();
       this.polygon = this.#createPolygon();
       this.damaged = this.#assessDamage(roadBorders, traffic);
+      this.updateTrafficCleared(traffic);
     }
     
     if (this.sensor) {
@@ -55,6 +58,15 @@ class Car{
       }
     }
     
+  }
+
+  updateTrafficCleared(traffic) {
+    traffic.forEach(vehicle => {
+      if (this.y < vehicle.y && !this.passedVehicles.includes(vehicle)) {
+        this.trafficCleared++;
+        this.passedVehicles.push(vehicle);
+      }
+    });
   }
 
   #assessDamage(roadBorders, traffic) {
