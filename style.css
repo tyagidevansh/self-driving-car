@@ -14,7 +14,7 @@ body {
   font-family: 'Courier New', Courier, monospace;
   font-size: medium;
   font-weight: bold;
-  width: 450px;
+  width: 400px;
   padding: 20px;
   overflow-y: auto;
 }
@@ -39,6 +39,7 @@ body {
   font-size: medium;
   font-weight: bold;
   padding: 20px;
+  max-width: 400px;
   overflow-y: auto;
 }
 

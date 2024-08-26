@@ -7,10 +7,17 @@ networkCanvas.width = 360;
 const carCtx = carCanvas.getContext("2d");
 const networkCtx = networkCanvas.getContext("2d");
 const road = new Road(carCanvas.width/2, carCanvas.width * 0.9);
-let mutation = 0;
+let mutation = 0.1;
+let trainingStartTime = new Date().getTime();
+let trainingDuration = 60000;
+let maxIterations = 100;
 let generation = 1;
 let maxScore = 0;
 let score = 0;
+let isAutomated = false;
+let isBrainLoaded = false;
+let loadedBrain; 
+let numberOfCars = 100;
 
 if (localStorage.getItem("generation")) {
   generation = parseInt(localStorage.getItem("generation"), 10) + 1;
@@ -38,11 +45,11 @@ const carsRemainingText = document.getElementById("carsRemainingText");
 
 document.addEventListener('DOMContentLoaded', (event) => {
   const automated = document.getElementById('automationSwitch');
+  isAutomated = automated.checked;  
   automated.addEventListener('change', () => {
-    if (automated.checked) {
-      console.log("automated!");
-    } else {
-      console.log("manual");
+    isAutomated = automated.checked; 
+    if (isAutomated) {
+      trainingStartTime = new Date().getTime();
     }
   });
 
@@ -55,21 +62,59 @@ document.addEventListener('DOMContentLoaded', (event) => {
   mutationInput.addEventListener('input', () => {
     mutationValue.textContent = mutationInput.value;
     mutation = mutationInput.value;
-    console.log(mutationInput.value);
   });
 
   const generationText = document.getElementById("generationText");
   generationText.textContent = generation;
+
+  const sensorRange = document.getElementById("sensorRange");
+  const sensorValue = document.getElementById("sensorValue");
+  const angleRange = document.getElementById("angleRange");
+  const angleValue = document.getElementById("angleValue");
+
+  sensorRange.value = 10;
+  angleRange.value = 120;
+  sensorValue.textContent = sensorRange.value;
+  angleRange.value = angleRange.value;
+
+  sensorRange.addEventListener('input', () => {
+    const rayCount = parseInt(sensorRange.value);
+    sensorValue.textContent = rayCount;
+    cars.forEach(car => car.sensor.setRayCount(rayCount));
+  });
+
+  angleRange.addEventListener('input', () => {
+    const angle = parseInt(angleRange.value);
+    angleValue.textContent = angle;
+    cars.forEach(car => car.sensor.setRaySpread(angle));
+  })
+
+  const carRange = document.getElementById("carRange");
+  const carValue = document.getElementById("carValue");
+
+  carRange.value = numberOfCars;
+  carValue.textContent = carRange.value;
+
+  carRange.addEventListener('input', () => {
+    numberOfCars = carRange.value;
+    carValue.textContent = carRange.value;
+  });
+  
 });
 
-let cars = generateCars(100);
+let cars = generateCars(numberOfCars);
 let bestCar = cars[0];
-if (localStorage.getItem("bestBrain")) {
+
+if (localStorage.getItem("loadedBrain")) {
+  loadedBrain = JSON.parse(localStorage.getItem("loadedBrain"));
+  isBrainLoaded = true;
+  applyLoadedBrain(loadedBrain);
+} else if (localStorage.getItem("bestBrain")) {
   for (let i = 0; i < cars.length; i++) {
     cars[i].brain = JSON.parse(
       localStorage.getItem("bestBrain")
     );
-    if ( i != 0) {
+    if (i != 0) {
       NeuralNetwork.mutate(cars[i].brain, mutation);
     }
   }
@@ -97,18 +142,19 @@ function discard() {
 
 function reset() {
   score = 0;
-  cars = generateCars(100);
-  let bestCar = cars[0];
-  if (localStorage.getItem("bestBrain")) {
+  cars = generateCars(numberOfCars);
+  bestCar = cars[0];
+  if (isBrainLoaded && loadedBrain) {
+    applyLoadedBrain(loadedBrain);
+  } else if (localStorage.getItem("bestBrain")) {
     for (let i = 0; i < cars.length; i++) {
       cars[i].brain = JSON.parse(
         localStorage.getItem("bestBrain")
       );
-      if ( i != 0) {
+      if (i != 0) {
         NeuralNetwork.mutate(cars[i].brain, mutation);
       }
     }
-    
   }
   traffic = [
     new Car(road.getLaneCenter(1), -100, 30, 50, "DUMMY", 2),
@@ -123,6 +169,62 @@ function reset() {
   generationText.textContent = generation;
 
   localStorage.setItem("generation", generation.toString());
+
+  if (isAutomated) {
+    trainingStartTime = new Date().getTime();
+  }
+
+  // if (isBrainLoaded) {
+  //   bestCar.brain = JSON.parse(JSON.stringify(loadedBrain));
+  // }
+
+  const rayCount = parseInt(document.getElementById('sensorRange').value);
+  const raySpread = parseInt(document.getElementById('angleRange').value);
+
+  cars.forEach(car => {
+    car.sensor.setRayCount(rayCount);
+    car.sensor.setRaySpread(raySpread);
+  })
+}
+
+function loadBrain(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const brain = JSON.parse(e.target.result);
+        resolve(brain);
+      } catch (error) {
+        reject(error);
+      }
+    };
+    reader.onerror = (error) => reject(error);
+    reader.readAsText(file);
+});
+}
+
+document.getElementById('brainLoader').addEventListener('change', async (event) => {
+  const file = event.target.files[0];
+  if (file) {
+    try {
+      loadedBrain = await loadBrain(file);
+      isBrainLoaded = true;
+      localStorage.setItem("loadedBrain", JSON.stringify(loadedBrain));
+      applyLoadedBrain(loadedBrain);
+    } catch (error) {
+      console.error('Error loading brain:', error);
+    }
+  }
+});
+
+function applyLoadedBrain(loadedBrain) {
+  cars.forEach((car, index) => {
+    car.brain = JSON.parse(JSON.stringify(loadedBrain));
+    if (index !== 0) {
+      NeuralNetwork.mutate(car.brain, mutation);
+    }
+  });
+  console.log('Brain loaded and applied successfully');
 }
 
 function generateCars(n) {
@@ -166,7 +268,6 @@ function generateTraffic() {
     if (isValid) {
       traffic.push(new Car(lane, y, 30, 50, "DUMMY", 2));
     } else {
-      console.log("Failed to place a car after maximum attempts");
       break;
     }
   }
@@ -182,7 +283,31 @@ function animate(time) {
   maxScoreText.textContent = Math.floor(maxScore / 10);
   localStorage.setItem("maxScore", maxScore.toString());
   
-  carsRemainingText.textContent = cars.filter(car => Math.abs(car.y - bestCar.y < window.innerHeight * 0.4)).length;
+  const undamagedCars = cars.filter(car => !car.damaged).length;
+  carsRemainingText.textContent = undamagedCars;
+
+    if (isAutomated) {
+        const currentTime = new Date().getTime();
+        const elapsedTime = currentTime - trainingStartTime;
+
+        if (elapsedTime >= trainingDuration || undamagedCars === 0) {
+            if (score > maxScore * 0.7) {
+                save();
+                maxScore = score;
+                localStorage.setItem("maxScore", maxScore.toString());
+            }
+
+            generation++;
+            reset();
+        }
+
+
+        cars.forEach(car => {
+            if (car.speed < 1 && elapsedTime > 5000) {
+                car.damaged = true;
+            }
+        });
+    }
   
   for (let i = 0; i < traffic.length; i++) {
     traffic[i].update(road.borders, []);
@@ -192,6 +317,9 @@ function animate(time) {
     cars[i].update(road.borders, traffic);
   }
   
+  
+
+  //fitness function
   bestCar = cars.find(
     c => c.y == Math.min(
       ...cars.map(c=>c.y)

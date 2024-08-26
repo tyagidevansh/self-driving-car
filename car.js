@@ -11,11 +11,13 @@ class Car{
     this.friction = 0.03;
     this.angle = 0;
     this.damaged = false;
-    
+    this.fitness = 0;
     this.useBrain = controlType == "AI";
 
     if (controlType != "DUMMY") {
       this.sensor = new Sensor(this);
+      this.sensor.setRayCount(parseInt(document.getElementById("sensorRange").value));
+      this.sensor.setRaySpread(parseInt(document.getElementById("angleRange").value));
       this.brain = new NeuralNetwork(
         [this.sensor.rayCount, 6, 4]
       );
@@ -28,6 +30,7 @@ class Car{
     this.mask = document.createElement("canvas");
     this.mask.width = width;
     this.mask.height = height;
+    this.carsRemainingText = document.getElementById("carsRemainingText");
   }
 
   update(roadBorders, traffic) {

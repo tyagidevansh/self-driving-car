@@ -9,6 +9,14 @@ class Sensor{
 
   }
 
+  setRayCount(count) {
+    this.rayCount = count;
+  }
+
+  setRaySpread(angle) {
+    this.raySpread = angle * Math.PI / 180;
+  }
+
   update(roadBorders, traffic) {
     this.#castRays();
     this.readings= [];
